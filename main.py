@@ -5,8 +5,13 @@ import configparser
 config = configparser.ConfigParser()
 config.read('config.ini')
 abp= pyodbc.connect(config['abp']['abpLogIn'])
+
 Month='April 2022'
 writer = pd.ExcelWriter('BATCH 2 EXAMPLE.xlsx', engine='xlsxwriter')
+inputFile=pd.read_excel('input/April_AR Data_Ohio2.xlsx',sheet_name='OH  Batch 2 -- Power',dtype=str)
+EDCDOC=pd.read_excel('input/EDC.xlsx',dtype=str)
+
+
 def addressInfo(IFile):
     accounts_id = list(IFile['Edc Account No'])
     n = math.ceil(len(accounts_id)/999)
@@ -39,13 +44,18 @@ def addressInfoHelper(IFile):
     IFile['BILL_ADDR_2_TX']=IFile['BILL_ADDR_2_TX'].str.title()
     IFile['BILL_CITY_TX']=IFile['BILL_CITY_TX'].str.title()
     return IFile
+def pullEDCUnit(df):
+    col=['EDC','EDC Vendor ID','EDC State','EDC CP3']
+    EDCDOC=EDCDOC.drop(col,axis=1)
+    df=pd.merge(df,EDCDOC,how='left',on='Edc D&B No')
+    return df
 
-inputFile=pd.read_excel('input/April_AR Data_Ohio2.xlsx',sheet_name='OH  Batch 2 -- Power',dtype=str)
 inputFile['Full Name']=inputFile['Account Name 2'].str.title()+' '+inputFile['Account Name 1'].str.title()
 inputFile['Renewal Rate']=inputFile['Renewal Rate'].astype(float)
 inputFile['Renewal Rate']=inputFile['Renewal Rate'].round(decimals = 2)
 print(inputFile['Edc Account No'].count()/1000)
 
+inputFile=pullEDCUnit(inputFile)
 AddDf=addressInfoHelper(inputFile)
 FinalDF=pd.DataFrame({'Edc Account No':AddDf['Edc Account No'],
                       'Full Name':AddDf['Full Name'],
@@ -60,7 +70,9 @@ FinalDF=pd.DataFrame({'Edc Account No':AddDf['Edc Account No'],
                       'opt out date':AddDf['Opt Out Date'],
                       'Renewal Term End Date':AddDf['Renewal Term End Date'],
                       'Contract':AddDf['Contract Id'],'SERVICE State':AddDf['State'],
-                      'EDC DB':AddDf['Edc D&B No']})
+                      'EDC DB':AddDf['Edc D&B No'],'Unit':AddDf['Price Unit']})
+
+
 
 
 
